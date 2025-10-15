@@ -1,13 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "npm run setup && npm run build",
-  "builds": [
-    { "src": "build/server/index.js", "use": "@vercel/node" },
-    { "src": "build/client/**", "use": "@vercel/static" }
-  ],
+  "buildCommand": "npm ci && npm run setup && npm run build",
+  "functions": { "api/index.js": { "runtime": "nodejs20.x" } },
   "routes": [
     { "src": "/build/(.*)", "dest": "/build/client/$1" },
-    { "src": "/(.*)", "dest": "/build/server/index.js" }
+    { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }
 

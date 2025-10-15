@@ -2,12 +2,11 @@
 
 client_id = "773eb5718ee23a19560cbf525d84c21e"
 name = "TrueAtoms"
-application_url = "https://example.com"
+application_url = "https://true-atom.vercel.app"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-include_config_on_deploy = true
 
 [webhooks]
 api_version = "2026-01"
@@ -39,9 +38,9 @@ optional_scopes = [ ]
 use_legacy_install_flow = false
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://true-atom.vercel.app/api/auth" ]
 
 [app_proxy]
-url = "https://arrested-term-rolled-admit.trycloudflare.com/app/proxy"
+url = "https://true-atom.vercel.app/app/proxy"
 subpath = "proxy"
 prefix = "apps"
