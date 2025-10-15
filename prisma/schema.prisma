@@ -1,0 +1,206 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+model Test {
+  id            String   @id @default(cuid())
+  name          String
+  status        String   // Draft | Running | Paused | Completed
+  productId     String
+  variations    Json     // Array of variation objects
+  trafficSplit  Json     // Array of percentages
+  goal          String
+  // Optional extended details (persist full draft info server-side)
+  description   String?
+  hypothesis    String?
+  duration      Int?
+  durationUnit  String?
+  selectedProducts Json?   // Keep full selected products array for drafts/grouped tests
+  targeting     Json?
+  stoppedVariations Json?
+  createdAt     DateTime @default(now())
+  startedAt     DateTime?
+  completedAt   DateTime?
+  
+  // Relations
+  product       Product? @relation(fields: [productId], references: [shopifyId])
+  
+  @@index([status, productId])
+}
+
+model Event {
+  id               String   @id @default(cuid())
+  type             String   // page_view | add_to_cart | purchase
+  testId           String
+  variation        String
+  productId        String?
+  variantId        String?
+  qty              Int?
+  revenueCents     Int?
+  path             String?
+  ts               DateTime @default(now())
+  
+  // Enhanced tracking data
+  visitorId        String?
+  sessionId        String?
+  referrer         String?
+  userAgent        String?
+  screenResolution String?
+  viewportSize     String?
+  timezone         String?
+  language         String?
+
+  // Relations
+  variant          ProductVariant? @relation(fields: [variantId], references: [shopifyId])
+
+  @@index([testId, variation, ts])
+  @@index([visitorId, ts])
+  @@index([sessionId, ts])
+}
+
+// Shopify Store Data Models
+model Product {
+  id          String   @id @default(cuid())
+  shopifyId   String   @unique
+  title       String
+  handle      String?
+  status      String   // ACTIVE | ARCHIVED | DRAFT
+  vendor      String?
+  productType String?
+  tags        String?  // JSON array as string
+  image       String?  // Main product image URL
+  price       String?  // Base product price
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastSynced  DateTime @default(now())
+
+  // Relations
+  variants    ProductVariant[]
+  tests       Test[]
+
+  @@index([shopifyId, status])
+}
+
+model ProductVariant {
+  id          String   @id @default(cuid())
+  shopifyId   String   @unique
+  productId   String
+  title       String
+  price       String   // Store as string to preserve precision
+  sku         String?
+  inventory   Int?
+  weight      Float?
+  weightUnit  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastSynced  DateTime @default(now())
+
+  // Relations
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  events      Event[]
+
+  @@index([productId, shopifyId])
+}
+
+model Customer {
+  id          String   @id @default(cuid())
+  shopifyId   String   @unique
+  email       String?
+  firstName   String?
+  lastName    String?
+  phone       String?
+  state       String?  // ACTIVE | DISABLED | INVITED | DECLINED | ACCEPTED
+  totalSpent  String?  // Store as string to preserve precision
+  ordersCount Int      @default(0)
+  country     String?
+  region      String?
+  city        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastSynced  DateTime @default(now())
+
+  // Relations
+  orders      Order[]
+
+  @@index([shopifyId, state])
+  @@index([country, state])
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  shopifyId       String   @unique
+  name            String   // Order number like #1001
+  email           String?
+  phone           String?
+  totalPrice      String   // Store as string to preserve precision
+  currency        String   @default("USD")
+  financialStatus String?  // PENDING | AUTHORIZED | PARTIALLY_PAID | PAID | PARTIALLY_REFUNDED | REFUNDED | VOIDED
+  fulfillmentStatus String? // FULFILLED | NULL | PARTIAL | RESTOCKED
+  processedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastSynced      DateTime @default(now())
+
+  // Relations
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  lineItems       OrderLineItem[]
+
+  @@index([shopifyId, financialStatus])
+}
+
+model OrderLineItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String?
+  variantId   String?
+  title       String
+  variantTitle String?
+  quantity    Int
+  price       String   // Store as string to preserve precision
+  createdAt   DateTime @default(now())
+
+  // Relations
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, productId])
+}
+
+model AutomationLog {
+  id        String   @id @default(cuid())
+  testId    String
+  action    String
+  details   String   // JSON string of action details
+  timestamp DateTime @default(now())
+
+  @@index([testId, timestamp])
+}
